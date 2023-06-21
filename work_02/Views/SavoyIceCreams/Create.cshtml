@@ -1,0 +1,250 @@
+﻿@model List<work_02.ViewModel.SavoyIceCreamViewModel>
+
+@{
+    ViewBag.Title = "Create";
+}
+<style>
+    .table {
+        width: 100%;
+    }
+
+    .width {
+        width: 100px;
+    }
+</style>
+
+<div class="row">
+    <div class="col">
+        @using (Html.BeginForm("CreateIceCream", "SavoyIceCreams", FormMethod.Post))
+        {
+            <table class="table" id="data-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <p>SL/NO</p>
+                        </th>
+                        <th>
+                            Product Name
+                        </th>
+                        <th>
+                            Price
+                        </th>
+                        <th>
+                            Eja
+                        </th>
+                        <th>
+                            New Product
+                        </th>
+                        <th>
+                            Total
+                        </th>
+                        <th>
+                            Sales Quantity
+                        </th>
+                        <th>
+                            Total Amount
+                        </th>
+                        <th>
+                            Return
+                        </th>
+                        <th>
+                            Remaining
+                        </th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <p><b>@(i + 1)</b></p>
+                            </td>
+                            <td>
+                                @Html.DropDownListFor(x => x[i].ProductCategoryId, ViewBag.ProductCategoryID as SelectList, "-- Select Category --", new { @class = "form-control product-category", data_row_index = i })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].Price, new { @class = "width" })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].Eja, new { @class = "width eja-textbox", id = "eja-textbox-" + i, @readonly = "readonly" })
+                            </td>
+
+                            <td>
+                                @Html.TextBoxFor(x => x[i].NewProduct, new { @class = "width new-product-textbox", data_row_index = i })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].Total, new { @class = "width total-textbox", id = "total-textbox-" + i, @readonly = "readonly" })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].SalesQuantity, new { @class = "width" })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].TotalAmount, new { @class = "width" })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].Return, new { @class = "width" })
+                            </td>
+                            <td>
+                                @Html.TextBoxFor(x => x[i].Remaining, new { @class = "width" })
+                            </td>
+                            <td>
+                                @if (i == Model.Count - 1)
+                                {
+                                    <button type="button" class="btn btn-danger remove-row" data-row-index="@i">Remove</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-success" id="add-row">Add Row</button>
+            <div class="form-group row">
+                <div class="col-10 offset-2">
+                    <button type="submit" class="btn btn-primary" id="btnCreate"><i class="fa fa-save"></i> Save</button>
+                    <div id="msg-create"></div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Add necessary HTML code for the table and form -->
+    <!-- Include jQuery library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(function () {
+            // Function to calculate the total based on Eja and newProduct values
+            function calculateTotal(index) {
+                var ejaValue = parseFloat($('#eja-textbox-' + index).val()) || 0; // Use 0 if ejaValue is NaN
+                var newProductValue = parseFloat($('.new-product-textbox[data-row-index="' + index + '"]').val()) || 0; // Use 0 if newProductValue is NaN
+                var totalTextbox = $('#total-textbox-' + index);
+
+                // Calculate the total and update the total textbox
+                var totalValue = ejaValue + newProductValue;
+                totalTextbox.val(totalValue);
+                console.log(totalValue);
+            }
+
+            // Function to initialize event handlers for a given row index
+            function initializeRow(index) {
+                var dropdown = $('select[name="[' + index + '].ProductCategoryId"]');
+                var ejaTextbox = $('#eja-textbox-' + index);
+                var newProductTextbox = $('.new-product-textbox[data-row-index="' + index + '"]');
+
+                // Event handler for product category selection change
+                dropdown.on("change", function () {
+                    var selectedCategoryId = $(this).val();
+
+                    if (selectedCategoryId !== "") {
+                        // AJAX request to retrieve the Eja value for the selected product category
+                        $.ajax({
+                            url: '/SavoyIceCreams/GetPreviousDayEjaByCategory',
+                            method: 'GET',
+                            data: { productCategoryID: selectedCategoryId },
+                            success: function (eja) {
+                                // Set the retrieved Eja value in the corresponding textbox
+                                ejaTextbox.val(eja);
+
+                                // Recalculate the total
+                                calculateTotal(index);
+                            },
+                            error: function () {
+                                alert('Failed to retrieve Eja for the selected product category.');
+                            }
+                        });
+                    }
+                });
+
+                // Event handler for Eja textbox change
+                ejaTextbox.on("input", function () {
+                    calculateTotal(index);
+                });
+
+                // Event handler for new product textbox change
+                newProductTextbox.on("input", function () {
+                    calculateTotal(index);
+                });
+            }
+
+            // Fetch categories via AJAX and populate the initial dropdown list for the default row
+            var defaultDropdown = $('select[name$=".ProductCategoryId"]');
+            $.ajax({
+                url: '/SavoyIceCreams/GetProductCategories',
+                method: 'GET',
+                success: function (categories) {
+                    defaultDropdown.empty();
+                    defaultDropdown.append($('<option>').val('').text('-- Select Category --'));
+                    $.each(categories, function (index, category) {
+                        defaultDropdown.append($('<option>').val(category.Value).text(category.Text));
+                    });
+
+                    // Initialize event handler for the default row
+                    initializeRow(0);
+                },
+                error: function () {
+                    alert('Failed to load product categories.');
+                }
+            });
+
+            // Add Row button click event
+            $("#add-row").on("click", function () {
+                var tableBody = $("#data-table tbody");
+                var index = tableBody.children("tr").length;
+
+                var rowHtml = '<tr>' +
+                    '<td><p><b>' + (index + 1) + '</b></p></td>' +
+                    '<td><select class="form-control product-category" name="[' + index + '].ProductCategoryId" data-row-index="' + index + '"><option value="">-- Select Category --</option></select></td>' +
+                    '<td><input class="width" name="[' + index + '].Price" type="text" /></td>' +
+                    '<td><input class="width eja-textbox" id="eja-textbox-' + index + '" name="[' + index + '].Eja" type="text" readonly="readonly" /></td>' +
+                    '<td><input class="width new-product-textbox" name="[' + index + '].NewProduct" type="text" data-row-index="' + index + '" /></td>' +
+                    '<td><input class="width total-textbox" name="[' + index + '].Total" type="text" readonly="readonly" id="total-textbox-' + index + '" /></td>' +
+                    '<td><input class="width" name="[' + index + '].SalesQuantity" type="text" /></td>' +
+                    '<td><input class="width" name="[' + index + '].TotalAmount" type="text" /></td>' +
+                    '<td><input class="width" name="[' + index + '].Return" type="text" /></td>' +
+                    '<td><input class="width" name="[' + index + '].Remaining" type="text" /></td>' +
+                    '<td><button type="button" class="btn btn-danger remove-row" data-row-index="' + index + '">Remove</button></td>' +
+                    '</tr>';
+
+                tableBody.append(rowHtml);
+
+                var newDropdown = $('select[name$=".ProductCategoryId"]:last');
+
+                // Fetch categories via AJAX and populate the newly added dropdown list
+                $.ajax({
+                    url: '/SavoyIceCreams/GetProductCategories',
+                    method: 'GET',
+                    success: function (categories) {
+                        newDropdown.empty();
+                        newDropdown.append($('<option>').val('').text('-- Select Category --'));
+                        $.each(categories, function (index, category) {
+                            newDropdown.append($('<option>').val(category.Value).text(category.Text));
+                        });
+
+                        // Initialize event handler for the new row
+                        initializeRow(index);
+                    },
+                    error: function () {
+                        alert('Failed to load product categories.');
+                    }
+                });
+            });
+
+            // Remove Row button click event
+            $(document).on("click", ".remove-row", function () {
+                var rowIndex = $(this).data("row-index");
+                var tableBody = $("#data-table tbody");
+
+                // Remove the row from the table
+                tableBody.children("tr[data-row-index='" + rowIndex + "']").remove();
+
+                // Update the SL/NO values of the remaining rows
+                tableBody.children("tr").each(function (index, row) {
+                    $(row).find("td:first p").text(index + 1);
+                });
+            });
+        });
+    </script>
+}
