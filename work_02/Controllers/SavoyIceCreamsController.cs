@@ -1,7 +1,9 @@
-﻿using System;
+﻿using CrystalDecisions.CrystalReports.Engine;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Web;
@@ -85,6 +87,23 @@ namespace work_02.Controllers
             return Json(eja, JsonRequestBehavior.AllowGet);
         }
 
+        public ActionResult ExportCustomer()
+        {
+            
+            var savoyIceCream = db.SavoyIceCream.Include(s => s.ProductCategory).ToList();
+
+            ReportDocument rd = new ReportDocument();
+            rd.Load(Server.MapPath("~/SavoyIceReportt.rpt"));
+            rd.SetDataSource(savoyIceCream);
+            Response.Buffer = false;
+            Response.ClearContent();
+            Response.ClearHeaders();
+
+            Stream stream = rd.ExportToStream(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat);
+            stream.Seek(0, SeekOrigin.Begin);
+
+            return File(stream, "application/pdf", "SavoyIceCreamReport.pdf");
+        }
 
 
     }
