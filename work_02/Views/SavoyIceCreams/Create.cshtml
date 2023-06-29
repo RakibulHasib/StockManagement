@@ -64,7 +64,7 @@
                                 @Html.DropDownListFor(x => x[i].ProductCategoryId, ViewBag.ProductCategoryID as SelectList, "-- Select Category --", new { @class = "form-control product-category", data_row_index = i })
                             </td>
                             <td>
-                                @Html.TextBoxFor(x => x[i].Price, new { @class = "width" })
+                                @Html.TextBoxFor(x => x[i].Price, new { @class = "width price-textbox", data_row_index = i })
                             </td>
                             <td>
                                 @Html.TextBoxFor(x => x[i].Eja, new { @class = "width eja-textbox", id = "eja-textbox-" + i, @readonly = "readonly" })
@@ -77,10 +77,10 @@
                                 @Html.TextBoxFor(x => x[i].Total, new { @class = "width total-textbox", id = "total-textbox-" + i, @readonly = "readonly" })
                             </td>
                             <td>
-                                @Html.TextBoxFor(x => x[i].SalesQuantity, new { @class = "width" })
+                                @Html.TextBoxFor(x => x[i].SalesQuantity, new { @class = "width sales-quantity-textbox", data_row_index = i })
                             </td>
                             <td>
-                                @Html.TextBoxFor(x => x[i].TotalAmount, new { @class = "width" })
+                                @Html.TextBoxFor(x => x[i].TotalAmount, new { @class = "width total-amount-textbox", id = "total-amount-textbox-" + i, @readonly = "readonly" })
                             </td>
                             <td>
                                 @Html.TextBoxFor(x => x[i].Return, new { @class = "width" })
@@ -128,11 +128,25 @@
                 console.log(totalValue);
             }
 
+            // Function to calculate the total amount based on price and sales quantity values
+            function calculateTotalAmount(index) {
+                var priceValue = parseFloat($('.price-textbox[data-row-index="' + index + '"]').val()) || 0; // Use 0 if priceValue is NaN
+                var salesQuantityValue = parseFloat($('.sales-quantity-textbox[data-row-index="' + index + '"]').val()) || 0; // Use 0 if salesQuantityValue is NaN
+                var totalAmountTextbox = $('#total-amount-textbox-' + index);
+
+                // Calculate the total amount and update the total amount textbox
+                var totalAmountValue = priceValue * salesQuantityValue;
+                totalAmountTextbox.val(totalAmountValue);
+                console.log(totalAmountValue);
+            }
+
             // Function to initialize event handlers for a given row index
             function initializeRow(index) {
                 var dropdown = $('select[name="[' + index + '].ProductCategoryId"]');
                 var ejaTextbox = $('#eja-textbox-' + index);
                 var newProductTextbox = $('.new-product-textbox[data-row-index="' + index + '"]');
+                var priceTextbox = $('.price-textbox[data-row-index="' + index + '"]');
+                var salesQuantityTextbox = $('.sales-quantity-textbox[data-row-index="' + index + '"]');
 
                 // Event handler for product category selection change
                 dropdown.on("change", function () {
@@ -167,6 +181,16 @@
                 newProductTextbox.on("input", function () {
                     calculateTotal(index);
                 });
+
+                // Event handler for price textbox change
+                priceTextbox.on("input", function () {
+                    calculateTotalAmount(index);
+                });
+
+                // Event handler for sales quantity textbox change
+                salesQuantityTextbox.on("input", function () {
+                    calculateTotalAmount(index);
+                });
             }
 
             // Fetch categories via AJAX and populate the initial dropdown list for the default row
@@ -197,12 +221,12 @@
                 var rowHtml = '<tr>' +
                     '<td><p><b>' + (index + 1) + '</b></p></td>' +
                     '<td><select class="form-control product-category" name="[' + index + '].ProductCategoryId" data-row-index="' + index + '"><option value="">-- Select Category --</option></select></td>' +
-                    '<td><input class="width" name="[' + index + '].Price" type="text" /></td>' +
+                    '<td><input class="width price-textbox" name="[' + index + '].Price" type="text" data-row-index="' + index + '" /></td>' +
                     '<td><input class="width eja-textbox" id="eja-textbox-' + index + '" name="[' + index + '].Eja" type="text" readonly="readonly" /></td>' +
                     '<td><input class="width new-product-textbox" name="[' + index + '].NewProduct" type="text" data-row-index="' + index + '" /></td>' +
                     '<td><input class="width total-textbox" name="[' + index + '].Total" type="text" readonly="readonly" id="total-textbox-' + index + '" /></td>' +
-                    '<td><input class="width" name="[' + index + '].SalesQuantity" type="text" /></td>' +
-                    '<td><input class="width" name="[' + index + '].TotalAmount" type="text" /></td>' +
+                    '<td><input class="width sales-quantity-textbox" name="[' + index + '].SalesQuantity" type="text" data-row-index="' + index + '" /></td>' +
+                    '<td><input class="width total-amount-textbox" name="[' + index + '].TotalAmount" type="text" readonly="readonly" id="total-amount-textbox-' + index + '" /></td>' +
                     '<td><input class="width" name="[' + index + '].Return" type="text" /></td>' +
                     '<td><input class="width" name="[' + index + '].Remaining" type="text" /></td>' +
                     '<td><button type="button" class="btn btn-danger remove-row" data-row-index="' + index + '">Remove</button></td>' +
@@ -223,7 +247,7 @@
                             newDropdown.append($('<option>').val(category.Value).text(category.Text));
                         });
 
-                        // Initialize event handler for the new row
+                        // Initialize event handler for the newly added row
                         initializeRow(index);
                     },
                     error: function () {
@@ -235,14 +259,26 @@
             // Remove Row button click event
             $(document).on("click", ".remove-row", function () {
                 var rowIndex = $(this).data("row-index");
-                var tableBody = $("#data-table tbody");
+                var row = $(this).closest("tr");
 
-                // Remove the row from the table
-                tableBody.children("tr[data-row-index='" + rowIndex + "']").remove();
+                row.remove();
 
-                // Update the SL/NO values of the remaining rows
-                tableBody.children("tr").each(function (index, row) {
-                    $(row).find("td:first p").text(index + 1);
+                // Update the row index of the remaining rows
+                var rows = $("#data-table tbody tr");
+                rows.each(function (index) {
+                    $(this).find("td:first p b").text(index + 1);
+                    $(this).find(".product-category").attr("name", "[" + index + "].ProductCategoryId");
+                    $(this).find(".product-category").attr("data-row-index", index);
+                    $(this).find(".price-textbox").attr("name", "[" + index + "].Price");
+                    $(this).find(".price-textbox").attr("data-row-index", index);
+                    $(this).find(".eja-textbox").attr("id", "eja-textbox-" + index);
+                    $(this).find(".new-product-textbox").attr("name", "[" + index + "].NewProduct");
+                    $(this).find(".new-product-textbox").attr("data-row-index", index);
+                    $(this).find(".total-textbox").attr("id", "total-textbox-" + index);
+                    $(this).find(".sales-quantity-textbox").attr("name", "[" + index + "].SalesQuantity");
+                    $(this).find(".sales-quantity-textbox").attr("data-row-index", index);
+                    $(this).find(".total-amount-textbox").attr("id", "total-amount-textbox-" + index);
+                    $(this).find(".remove-row").attr("data-row-index", index);
                 });
             });
         });

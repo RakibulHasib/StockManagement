@@ -89,12 +89,25 @@ namespace work_02.Controllers
 
         public ActionResult ExportCustomer()
         {
-            
             var savoyIceCream = db.SavoyIceCream.Include(s => s.ProductCategory).ToList();
 
+            var savoyIceCreamWithoutNullable = savoyIceCream.Select(s => new
+            {
+                CreatedDate = s.CreatedDate ?? DateTime.MinValue,
+                Price = s.Price,
+                NewProduct = s.NewProduct ?? 0,
+                Total = s.Total ?? 0,
+                SalesQuantity = s.SalesQuantity ?? 0,
+                TotalAmount = s.TotalAmount ?? 0,
+                Return = s.Return ?? 0,
+                Remaining = s.Remaining ?? 0,
+                Eja = s.Eja ?? 0,
+                s.ProductCategory.ProductName
+            }).ToList();
+
             ReportDocument rd = new ReportDocument();
-            rd.Load(Server.MapPath("~/SavoyIceReportt.rpt"));
-            rd.SetDataSource(savoyIceCream);
+            rd.Load(Server.MapPath("~/SavoyIceReport.rpt"));
+            rd.SetDataSource(savoyIceCreamWithoutNullable);
             Response.Buffer = false;
             Response.ClearContent();
             Response.ClearHeaders();
@@ -105,6 +118,25 @@ namespace work_02.Controllers
             return File(stream, "application/pdf", "SavoyIceCreamReport.pdf");
         }
 
+
+
+        [HttpGet]
+        public ActionResult Index(DateTime? search)
+        {
+            var savoyIceCreams = db.SavoyIceCream.AsQueryable();
+
+            if (search.HasValue)
+            {
+                DateTime startDate = search.Value.Date;
+                DateTime endDate = startDate.AddDays(1);
+
+                savoyIceCreams = savoyIceCreams.Where(x => x.CreatedDate >= startDate && x.CreatedDate < endDate);
+            }
+
+            ViewBag.CurrentFilter = search;
+
+            return View(savoyIceCreams.ToList());
+        }
 
     }
 }
