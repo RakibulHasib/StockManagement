@@ -87,36 +87,50 @@ namespace work_02.Controllers
             return Json(eja, JsonRequestBehavior.AllowGet);
         }
 
-        public ActionResult ExportCustomer()
+        public ActionResult ExportCustomer(DateTime? search)
         {
-            var savoyIceCream = db.SavoyIceCream.Include(s => s.ProductCategory).ToList();
-
-            var savoyIceCreamWithoutNullable = savoyIceCream.Select(s => new
+            if (search.HasValue)
             {
-                CreatedDate = s.CreatedDate ?? DateTime.MinValue,
-                Price = s.Price,
-                NewProduct = s.NewProduct ?? 0,
-                Total = s.Total ?? 0,
-                SalesQuantity = s.SalesQuantity ?? 0,
-                TotalAmount = s.TotalAmount ?? 0,
-                Return = s.Return ?? 0,
-                Remaining = s.Remaining ?? 0,
-                Eja = s.Eja ?? 0,
-                s.ProductCategory.ProductName
-            }).ToList();
+                DateTime searchDate = search.Value.Date;
+                DateTime searchDateEnd = searchDate.AddDays(1).Date;
 
-            ReportDocument rd = new ReportDocument();
-            rd.Load(Server.MapPath("~/SavoyIceReport.rpt"));
-            rd.SetDataSource(savoyIceCreamWithoutNullable);
-            Response.Buffer = false;
-            Response.ClearContent();
-            Response.ClearHeaders();
+                var savoyIceCream = db.SavoyIceCream
+                    .Include(s => s.ProductCategory)
+                    .Where(a => a.CreatedDate >= searchDate && a.CreatedDate < searchDateEnd)
+                    .ToList();
 
-            Stream stream = rd.ExportToStream(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat);
-            stream.Seek(0, SeekOrigin.Begin);
+                var savoyIceCreamWithoutNullable = savoyIceCream.Select(s => new
+                {
+                    CreatedDate = s.CreatedDate ?? DateTime.MinValue,
+                    Price = s.Price,
+                    NewProduct = s.NewProduct ?? 0,
+                    Total = s.Total ?? 0,
+                    SalesQuantity = s.SalesQuantity ?? 0,
+                    TotalAmount = s.TotalAmount ?? 0,
+                    Return = s.Return ?? 0,
+                    Remaining = s.Remaining ?? 0,
+                    Eja = s.Eja ?? 0,
+                    s.ProductCategory.ProductName
+                }).ToList();
 
-            return File(stream, "application/pdf", "SavoyIceCreamReport.pdf");
+                ReportDocument rd = new ReportDocument();
+                rd.Load(Server.MapPath("~/SavoyIceReport.rpt"));
+                rd.SetDataSource(savoyIceCreamWithoutNullable);
+                Response.Buffer = false;
+                Response.ClearContent();
+                Response.ClearHeaders();
+
+                Stream stream = rd.ExportToStream(CrystalDecisions.Shared.ExportFormatType.PortableDocFormat);
+                stream.Seek(0, SeekOrigin.Begin);
+
+                return File(stream, "application/pdf", $"SavoyIceCreamReport({savoyIceCreamWithoutNullable[0].CreatedDate}).pdf");
+            }
+
+            // Handle case when search parameter is null or not provided
+            // You can choose to redirect or return an error view
+            return RedirectToAction("Index");
         }
+
 
 
 

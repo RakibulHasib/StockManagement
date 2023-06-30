@@ -12,11 +12,11 @@
         @Html.ActionLink("Create New", "Create")
     </p>
     <p>
-        <a class="btn btn-secondary" href="@Url.Action("ExportCustomer", "SavoyIceCreams")">Print</a>
+        <a class="btn btn-secondary" href="@Url.Action("ExportCustomer", "SavoyIceCreams", new { search = ViewBag.CurrentFilter })">Print</a>
     </p>
     <div>
         <label for="search">Filter by Created Date:</label>
-        @Html.TextBox("search", ViewBag.CurrentFilter as string, new { type = "date" })
+        @Html.TextBox("search", ViewBag.CurrentFilter as string, new { type = "date", value = ViewBag.CurrentFilter })
         <input type="submit" value="Filter" />
         <a href="@Url.Action("Index", "SavoyIceCreams")">Clear</a>
     </div>
